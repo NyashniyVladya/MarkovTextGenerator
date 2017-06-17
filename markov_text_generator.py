@@ -6,10 +6,15 @@
 
 """
 
+import json
 from re import compile as re_compile
+from os import makedirs
 from os.path import (
     abspath,
-    isfile
+    isfile,
+    expanduser,
+    exists,
+    join as os_join
 )
 from collections import deque
 from random import choice
@@ -17,11 +22,11 @@ from semver import format_version
 
 __version__ = format_version(
     major=1,
-    minor=1,
+    minor=2,
     patch=0
 )
 
-class LocutorExcept(Exception):
+class MarkovTextExcept(Exception):
     """
     Класс исключения модуля.
     """
@@ -34,23 +39,30 @@ class MarkovTextGenerator(object):
     """
 
     WORD_OR_MARKS = re_compile(r"\w+|[\.\!\?…,;]+")
+    ONLY_WORDS = re_compile(r"\w+")
     ONLY_MARKS = re_compile(r"[\.\!\?…,;]+")
     END_TOKENS = re_compile(r"[\.\!\?…]+")
 
-    def __init__(self, chain_order=2, *file_paths):
+    def __init__(self, chain_order=2, vk_object=None, *file_paths):
         """
         :chain_order: Количество звеньев цепи, для принятия решения о следующем.
+        :vk_object: Объект класса Владя-бота, для интеграции. Не обязателен.
         :file_paths: Пути к текстовым файлам, для обучения модели.
         """
 
         if chain_order < 1:
-            raise LocutorExcept(
+            raise MarkovTextExcept(
                 "Цепь не может быть {0}-порядка.".format(chain_order)
             )
         self.chain_order = chain_order
         self.tokens_array = ()
         self.base_dict = {}
         self.start_arrays = []
+        self.vk_object = vk_object
+        self.vocabulars = {}
+        self.temp_folder = expanduser("~\\textGeneratorTemp")
+        if not exists(self.temp_folder):
+            makedirs(self.temp_folder)
 
         for _path in frozenset(filter(isfile, map(abspath, file_paths))):
             self.update(_path)
@@ -60,6 +72,8 @@ class MarkovTextGenerator(object):
         Генерирует предложение.
         :start_words: Попытаться начать предложение с этих слов.
         """
+        if not self.base_dict:
+            raise MarkovTextExcept("База данных пуста.")
         text_array = list(self.get_start_array(*start_words))
         key_array = deque(text_array, maxlen=self.chain_order)
         while True:
@@ -79,12 +93,13 @@ class MarkovTextGenerator(object):
 
         return out_text.strip().capitalize()
 
-
     def get_start_array(self, *start_words):
         """
         Генерирует начало предложения.
         :start_words: Попытаться начать предложение с этих слов.
         """
+        if not self.start_arrays:
+            raise MarkovTextExcept("Не с чего начинать генерацию.")
         if not start_words:
             return choice(self.start_arrays)
         candidats = {}
@@ -92,9 +107,10 @@ class MarkovTextGenerator(object):
             candidats[tokens] = 0
             for word in start_words:
                 word = word.strip().lower()
-                for token in self.WORD_OR_MARKS.finditer(word):
+                for token in self.ONLY_WORDS.finditer(word):
                     token = token.group()
-                    candidats[tokens] += tokens.count(token)
+                    if token in tokens:
+                        candidats[tokens] += 1
         return max(candidats.items(), key=lambda x: x[-1])[0]
 
     def create_base(self):
@@ -119,7 +135,7 @@ class MarkovTextGenerator(object):
         """
         n_chain = self.chain_order
         if n_chain < 1:
-            raise LocutorExcept(
+            raise MarkovTextExcept(
                 "Цепь не может быть {0}-порядка.".format(n_chain)
             )
         n_chain += 1 # Последнее значение - результат возврата.
@@ -129,6 +145,60 @@ class MarkovTextGenerator(object):
             if len(changing_array) < n_chain:
                 continue # Массив ещё неполон.
             yield (tuple(changing_array)[:-1], changing_array[-1])
+
+    def set_vocabulary(self, peer_id, from_dialogue=None, update=False):
+        """
+        Получает вокабулар из функции get_vocabulary и делает его активным.
+        """
+
+        self.tokens_array = self.get_vocabulary(
+            peer_id,
+            from_dialogue,
+            update
+        )
+        self.create_base()
+
+
+    def get_vocabulary(self, peer_id, from_dialogue=None, update=False):
+        """
+        Возвращает запас слов, на основе переписок ВК.
+        Для имитации речи конкретного человека.
+        Работает только с импортом объекта "Владя-бота".
+
+        :peer_id: id, или имя страницы человека, речь которого имитируем.
+        :from_dialogue:
+            Из какого диалога/конфы брать переписку.
+            По умолчанию - переписка текущего профиля с человеком.
+        """
+        if not self.vk_object:
+            raise MarkovTextExcept("Объект бота не задан.")
+        if not isinstance(from_dialogue, (int, type(None))):
+            raise MarkovTextExcept("Передан неверный тип данных.")
+        user = self.vk_object.check_id(peer_id)
+        user_id = user["id"]
+        if not from_dialogue:
+            from_dialogue = user_id
+        json_name = "{0}_{1}".format(user_id, from_dialogue)
+        json_file = os_join(
+            self.temp_folder,
+            (json_name + ".json")
+        )
+        if not update:
+            if json_name in self.vocabulars.keys():
+                return self.vocabulars[json_name]
+            if exists(json_file):
+                with open(json_file, "r", encoding="utf-8") as js_file:
+                    self.vocabulars[json_name] = tuple(json.load(js_file))
+                return self.vocabulars[json_name]
+
+        all_message_txt = " ".join(
+            self.vk_object.get_all_messages_from_id(from_dialogue, user_id)
+        )
+        _tokens_array = tuple(self._parse_from_text(all_message_txt))
+        with open(json_file, "w", encoding="utf-8") as js_file:
+            json.dump(_tokens_array, js_file, ensure_ascii=False)
+        self.vocabulars[json_name] = _tokens_array
+        return _tokens_array
 
     def update(self, data, fromfile=True):
         """
@@ -143,7 +213,7 @@ class MarkovTextGenerator(object):
         Возвращает генератор токенов, из текста.
         """
         if not isinstance(text, str):
-            raise LocutorExcept("Передан не текст.")
+            raise MarkovTextExcept("Передан не текст.")
         text = text.strip().lower()
         need_start_token = True
         for token in self.WORD_OR_MARKS.finditer(text):
@@ -164,7 +234,7 @@ class MarkovTextGenerator(object):
         """
         file_path = abspath(file_path)
         if not isfile(file_path):
-            raise LocutorExcept("Передан не файл.")
+            raise MarkovTextExcept("Передан не файл.")
         with open(file_path, "rb") as txt_file:
             for line in txt_file:
                 try:
@@ -173,5 +243,4 @@ class MarkovTextGenerator(object):
                     continue
                 if not text:
                     continue
-                for token in self._parse_from_text(text):
-                    yield token
+                yield from self._parse_from_text(text)
