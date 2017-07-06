@@ -12,8 +12,8 @@ from os import makedirs
 from os.path import (
     abspath,
     isfile,
+    isdir,
     expanduser,
-    exists,
     join as os_join
 )
 from collections import deque
@@ -23,7 +23,7 @@ from semver import format_version
 __version__ = format_version(
     major=1,
     minor=2,
-    patch=0
+    patch=2
 )
 
 class MarkovTextExcept(Exception):
@@ -61,7 +61,7 @@ class MarkovTextGenerator(object):
         self.vk_object = vk_object
         self.vocabulars = {}
         self.temp_folder = expanduser("~\\textGeneratorTemp")
-        if not exists(self.temp_folder):
+        if not isdir(self.temp_folder):
             makedirs(self.temp_folder)
 
         for _path in frozenset(filter(isfile, map(abspath, file_paths))):
@@ -186,8 +186,8 @@ class MarkovTextGenerator(object):
         if not update:
             if json_name in self.vocabulars.keys():
                 return self.vocabulars[json_name]
-            if exists(json_file):
-                with open(json_file, "r", encoding="utf-8") as js_file:
+            if isfile(json_file):
+                with open(json_file, "rb") as js_file:
                     self.vocabulars[json_name] = tuple(json.load(js_file))
                 return self.vocabulars[json_name]
 
