@@ -8,6 +8,7 @@
 
 import json
 from re import compile as re_compile
+from collections import deque
 from os import makedirs
 from os.path import (
     abspath,
@@ -16,14 +17,16 @@ from os.path import (
     expanduser,
     join as os_join
 )
-from collections import deque
-from random import choice
+from random import (
+    choice,
+    choices
+)
 from semver import format_version
 
 __version__ = format_version(
     major=1,
-    minor=2,
-    patch=2
+    minor=3,
+    patch=3
 )
 
 class MarkovTextExcept(Exception):
@@ -38,9 +41,8 @@ class MarkovTextGenerator(object):
     Базовый класс, для генерации текста.
     """
 
-    WORD_OR_MARKS = re_compile(r"\w+|[\.\!\?…,;]+")
+    WORD_OR_MARKS = re_compile(r"\w+|[\.\!\?…,;:]+")
     ONLY_WORDS = re_compile(r"\w+")
-    ONLY_MARKS = re_compile(r"[\.\!\?…,;]+")
     END_TOKENS = re_compile(r"[\.\!\?…]+")
 
     def __init__(self, chain_order=2, vk_object=None, *file_paths):
@@ -57,7 +59,7 @@ class MarkovTextGenerator(object):
         self.chain_order = chain_order
         self.tokens_array = ()
         self.base_dict = {}
-        self.start_arrays = []
+        self.start_arrays = ()
         self.vk_object = vk_object
         self.vocabulars = {}
         self.temp_folder = expanduser("~\\textGeneratorTemp")
@@ -79,15 +81,15 @@ class MarkovTextGenerator(object):
         while True:
             tuple_key = tuple(key_array)
             next_token = choice(self.base_dict[tuple_key])
-            if next_token in ("$", "^"):
+            if next_token in "$^":
                 break
             text_array.append(next_token)
             key_array.append(next_token)
         out_text = ""
         for token in text_array:
-            if token in ("$", "^"):
+            if token in "$^":
                 continue
-            if not self.ONLY_MARKS.search(token):
+            if self.ONLY_WORDS.search(token):
                 out_text += " "
             out_text += token
 
@@ -102,16 +104,19 @@ class MarkovTextGenerator(object):
             raise MarkovTextExcept("Не с чего начинать генерацию.")
         if not start_words:
             return choice(self.start_arrays)
-        candidats = {}
+        _weights = []
         for tokens in self.start_arrays:
-            candidats[tokens] = 0
+            weight = 0
             for word in start_words:
                 word = word.strip().lower()
                 for token in self.ONLY_WORDS.finditer(word):
                     token = token.group()
                     if token in tokens:
-                        candidats[tokens] += 1
-        return max(candidats.items(), key=lambda x: x[-1])[0]
+                        weight += 1
+            _weights.append(weight)
+        if not tuple(filter(bool, _weights)):
+            return choice(self.start_arrays)
+        return choices(self.start_arrays, weights=_weights, k=1)[0]
 
     def create_base(self):
         """
@@ -119,13 +124,14 @@ class MarkovTextGenerator(object):
         Вызывается из метода обновления.
         """
         self.base_dict = {}
-        self.start_arrays = []
+        _start_arrays = set()
         for tokens, word in self.chain_generator():
             if tokens not in self.base_dict.keys():
                 self.base_dict[tokens] = []
             self.base_dict[tokens].append(word)
             if tokens[0] == "^": # Первые ключи, для начала генерации.
-                self.start_arrays.append(tokens)
+                _start_arrays.add(tokens)
+        self.start_arrays = tuple(_start_arrays)
 
     def chain_generator(self):
         """
