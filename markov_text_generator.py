@@ -124,13 +124,13 @@ class MarkovTextGenerator(object):
         Вызывается из метода обновления.
         """
         self.base_dict = {}
-        _start_arrays = set()
+        _start_arrays = []
         for tokens, word in self.chain_generator():
             if tokens not in self.base_dict.keys():
                 self.base_dict[tokens] = []
             self.base_dict[tokens].append(word)
             if tokens[0] == "^": # Первые ключи, для начала генерации.
-                _start_arrays.add(tokens)
+                _start_arrays.append(tokens)
         self.start_arrays = tuple(_start_arrays)
 
     def chain_generator(self):
@@ -164,6 +164,37 @@ class MarkovTextGenerator(object):
         )
         self.create_base()
 
+    def create_dump(self, name=None):
+        """
+        Сохраняет текущую базу на жёсткий диск.
+        :name: Имя файла, без расширения.
+        """
+        name = name or "vocabularDump"
+        dump_file = os_join(
+            self.temp_folder,
+            "{0}.json".format(name)
+        )
+        with open(dump_file, "w", encoding="utf-8") as js_file:
+            json.dump(self.tokens_array, js_file, ensure_ascii=False)
+
+    def load_dump(self, name=None):
+        """
+        Выгружает текущую базу на жёсткий диск.
+        Текущая база заменяется.
+        :name: Имя файла, без расширения.
+
+        AssertionError, если файла не существует.
+        """
+        name = name or "vocabularDump"
+        dump_file = os_join(
+            self.temp_folder,
+            "{0}.json".format(name)
+        )
+        assert isfile(dump_file)
+        with open(dump_file, "rb") as js_file:
+            self.tokens_array = tuple(json.load(js_file))
+        self.create_base()
+
 
     def get_vocabulary(self, peer_id, from_dialogue=None, update=False):
         """
@@ -187,7 +218,7 @@ class MarkovTextGenerator(object):
         json_name = "{0}_{1}".format(user_id, from_dialogue)
         json_file = os_join(
             self.temp_folder,
-            (json_name + ".json")
+            "{0}.json".format(json_name)
         )
         if not update:
             if json_name in self.vocabulars.keys():
