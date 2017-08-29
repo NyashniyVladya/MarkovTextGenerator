@@ -252,6 +252,7 @@ class MarkovTextGenerator(object):
             raise MarkovTextExcept("Передан не текст.")
         text = text.strip().lower()
         need_start_token = True
+        token = "$"  # На случай, если переданная строка пуста.
         for token in self.WORD_OR_MARKS.finditer(text):
             token = token.group()
             if need_start_token:
