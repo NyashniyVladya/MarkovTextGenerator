@@ -26,7 +26,7 @@ from semver import format_version
 __version__ = format_version(
     major=1,
     minor=4,
-    patch=3
+    patch=5
 )
 
 
@@ -241,8 +241,10 @@ class MarkovTextGenerator(object):
         Принимает текст, или путь к файлу и обновляет существующую базу.
         """
         func = (self._parse_from_file if fromfile else self._parse_from_text)
-        self.tokens_array += tuple(func(data))
-        self.create_base()
+        new_data = tuple(func(data))
+        if new_data:
+            self.tokens_array += new_data
+            self.create_base()
 
     def _parse_from_text(self, text):
         """
