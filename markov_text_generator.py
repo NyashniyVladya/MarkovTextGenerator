@@ -26,8 +26,9 @@ from semver import format_version
 __version__ = format_version(
     major=1,
     minor=4,
-    patch=0
+    patch=2
 )
+
 
 class MarkovTextExcept(Exception):
     """
@@ -129,7 +130,7 @@ class MarkovTextGenerator(object):
             if tokens not in self.base_dict.keys():
                 self.base_dict[tokens] = []
             self.base_dict[tokens].append(word)
-            if tokens[0] == "^": # Первые ключи, для начала генерации.
+            if tokens[0] == "^":  # Первые ключи, для начала генерации.
                 _start_arrays.append(tokens)
         self.start_arrays = tuple(_start_arrays)
 
@@ -144,12 +145,12 @@ class MarkovTextGenerator(object):
             raise MarkovTextExcept(
                 "Цепь не может быть {0}-порядка.".format(n_chain)
             )
-        n_chain += 1 # Последнее значение - результат возврата.
+        n_chain += 1  # Последнее значение - результат возврата.
         changing_array = deque(maxlen=n_chain)
         for token in self.tokens_array:
             changing_array.append(token)
             if len(changing_array) < n_chain:
-                continue # Массив ещё неполон.
+                continue  # Массив ещё неполон.
             yield (tuple(changing_array)[:-1], changing_array[-1])
 
     def set_vocabulary(self, peer_id, from_dialogue=None, update=False):
@@ -182,19 +183,17 @@ class MarkovTextGenerator(object):
         Загружает базу с жёсткого диска.
         Текущая база заменяется.
         :name: Имя файла, без расширения.
-
-        AssertionError, если файла не существует.
         """
         name = name or "vocabularDump"
         dump_file = os_join(
             self.temp_folder,
             "{0}.json".format(name)
         )
-        assert isfile(dump_file)
+        if not isfile(dump_file):
+            raise MarkovTextExcept("Файл {0!r} не найден.".format(dump_file))
         with open(dump_file, "rb") as js_file:
             self.tokens_array = tuple(json.load(js_file))
         self.create_base()
-
 
     def get_vocabulary(self, peer_id, from_dialogue=None, update=False):
         """
@@ -265,7 +264,6 @@ class MarkovTextGenerator(object):
         if token != "$":
             yield "$"
 
-
     def _parse_from_file(self, file_path):
         """
         см. описание _parse_from_text.
@@ -276,10 +274,7 @@ class MarkovTextGenerator(object):
             raise MarkovTextExcept("Передан не файл.")
         with open(file_path, "rb") as txt_file:
             for line in txt_file:
-                try:
-                    text = line.decode("utf-8").strip()
-                except UnicodeDecodeError:
-                    continue
+                text = line.decode("utf-8", "ignore").strip()
                 if not text:
                     continue
                 yield from self._parse_from_text(text)
