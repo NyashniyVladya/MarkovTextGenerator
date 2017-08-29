@@ -26,7 +26,7 @@ from semver import format_version
 __version__ = format_version(
     major=1,
     minor=4,
-    patch=2
+    patch=3
 )
 
 
@@ -115,7 +115,7 @@ class MarkovTextGenerator(object):
                     if token in tokens:
                         weight += 1
             _weights.append(weight)
-        if not tuple(filter(bool, _weights)):
+        if not any(_weights):
             return choice(self.start_arrays)
         return choices(self.start_arrays, weights=_weights, k=1)[0]
 
