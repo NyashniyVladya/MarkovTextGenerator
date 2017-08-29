@@ -25,8 +25,8 @@ from semver import format_version
 
 __version__ = format_version(
     major=1,
-    minor=3,
-    patch=3
+    minor=4,
+    patch=0
 )
 
 class MarkovTextExcept(Exception):
@@ -262,6 +262,8 @@ class MarkovTextGenerator(object):
             if self.END_TOKENS.search(token):
                 need_start_token = True
                 yield "$"
+        if token != "$":
+            yield "$"
 
 
     def _parse_from_file(self, file_path):
