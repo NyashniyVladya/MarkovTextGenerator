@@ -25,7 +25,7 @@ from semver import format_version
 
 __version__ = format_version(
     major=1,
-    minor=4,
+    minor=5,
     patch=5
 )
 
@@ -70,24 +70,27 @@ class MarkovTextGenerator(object):
         for _path in frozenset(filter(isfile, map(abspath, file_paths))):
             self.update(_path)
 
-    def start_generation(self, *start_words):
-        """
-        Генерирует предложение.
-        :start_words: Попытаться начать предложение с этих слов.
-        """
+    def _get_generate_tokens(self, *start_words):
         if not self.base_dict:
             raise MarkovTextExcept("База данных пуста.")
-        text_array = list(self.get_start_array(*start_words))
-        key_array = deque(text_array, maxlen=self.chain_order)
+        __text_array = list(self.get_start_array(*start_words))
+        key_array = deque(__text_array, maxlen=self.chain_order)
+        yield from __text_array
         while True:
             tuple_key = tuple(key_array)
             next_token = choice(self.base_dict[tuple_key])
             if next_token in "$^":
                 break
-            text_array.append(next_token)
             key_array.append(next_token)
+            yield next_token
+
+    def start_generation(self, *start_words):
+        """
+        Генерирует предложение.
+        :start_words: Попытаться начать предложение с этих слов.
+        """
         out_text = ""
-        for token in text_array:
+        for token in self._get_generate_tokens(*start_words):
             if token in "$^":
                 continue
             if self.ONLY_WORDS.search(token):
