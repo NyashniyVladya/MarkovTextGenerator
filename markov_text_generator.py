@@ -108,6 +108,8 @@ class MarkovTextGenerator(object):
             raise MarkovTextExcept("Не с чего начинать генерацию.")
         if not start_words:
             return choice(self.start_arrays)
+
+        _variants = []
         _weights = []
         for tokens in self.start_arrays:
             weight = 0
@@ -117,10 +119,14 @@ class MarkovTextGenerator(object):
                     token = token.group()
                     if token in tokens:
                         weight += 1
-            _weights.append(weight)
-        if not any(_weights):
+            if weight:
+                _variants.append(tokens)
+                _weights.append(weight)
+
+        if not _variants:
             return choice(self.start_arrays)
-        return choices(self.start_arrays, weights=_weights, k=1)[0]
+
+        return choices(_variants, weights=_weights, k=1)[0]
 
     def create_base(self):
         """
