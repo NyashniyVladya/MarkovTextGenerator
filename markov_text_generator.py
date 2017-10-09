@@ -204,7 +204,13 @@ class MarkovTextGenerator(object):
             self.tokens_array = tuple(json.load(js_file))
         self.create_base()
 
-    def get_vocabulary(self, peer_id, from_dialogue=None, update=False):
+    def get_vocabulary(
+        self,
+        peer_id,
+        from_dialogue=None,
+        update=False,
+        name_prefix=""
+    ):
         """
         Возвращает запас слов, на основе переписок ВК.
         Для имитации речи конкретного человека.
@@ -223,7 +229,7 @@ class MarkovTextGenerator(object):
         user_id = user["id"]
         if not from_dialogue:
             from_dialogue = user_id
-        json_name = "{0}_{1}".format(user_id, from_dialogue)
+        json_name = "{0}{1}_{2}".format(name_prefix, user_id, from_dialogue)
         json_file = os_join(
             self.temp_folder,
             "{0}.json".format(json_name)
