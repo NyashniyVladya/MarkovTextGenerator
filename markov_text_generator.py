@@ -21,13 +21,9 @@ from random import (
     choice,
     choices
 )
-from semver import format_version
 
-__version__ = format_version(
-    major=1,
-    minor=5,
-    patch=5
-)
+__author__ = "Vladya"
+__version__ = "1.5.5"
 
 
 class MarkovTextExcept(Exception):
