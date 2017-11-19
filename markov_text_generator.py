@@ -19,7 +19,8 @@ from os.path import (
 )
 from random import (
     choice,
-    choices
+    choices,
+    randint
 )
 
 __author__ = "Vladya"
@@ -66,17 +67,26 @@ class MarkovTextGenerator(object):
         for _path in frozenset(filter(isfile, map(abspath, file_paths))):
             self.update(_path)
 
-    def _get_generate_tokens(self, *start_words):
+    def _get_generate_tokens(self, *start_words, **kwargs):
         if not self.base_dict:
             raise MarkovTextExcept("База данных пуста.")
         __text_array = list(self.get_start_array(*start_words))
         key_array = deque(__text_array, maxlen=self.chain_order)
         yield from __text_array
+        string_counter = 0
+        _string_len = kwargs.pop("size", None)
+        if not isinstance(_string_len, int):
+            _string_len = randint(1, 5)
         while True:
             tuple_key = tuple(key_array)
-            next_token = choice(self.base_dict[tuple_key])
-            if next_token in "$^":
+            _variants = self.base_dict.get(tuple_key, None)
+            if not _variants:
                 break
+            next_token = choice(_variants)
+            if next_token in "$^":
+                string_counter += 1
+                if string_counter >= _string_len:
+                    break
             key_array.append(next_token)
             yield next_token
 
@@ -86,14 +96,19 @@ class MarkovTextGenerator(object):
         :start_words: Попытаться начать предложение с этих слов.
         """
         out_text = ""
+        _need_capialize = True
         for token in self._get_generate_tokens(*start_words):
             if token in "$^":
+                _need_capialize = True
                 continue
             if self.ONLY_WORDS.search(token):
                 out_text += " "
+            if _need_capialize:
+                _need_capialize = False
+                token = token.title()
             out_text += token
 
-        return out_text.strip().capitalize()
+        return out_text.strip()
 
     def get_start_array(self, *start_words):
         """
