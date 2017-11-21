@@ -76,7 +76,7 @@ class MarkovTextGenerator(object):
         string_counter = 0
         _string_len = kwargs.pop("size", None)
         if not isinstance(_string_len, int):
-            _string_len = randint(1, 5)
+            _string_len = randint(1, 7)
         while True:
             tuple_key = tuple(key_array)
             _variants = self.base_dict.get(tuple_key, None)
@@ -90,14 +90,14 @@ class MarkovTextGenerator(object):
             key_array.append(next_token)
             yield next_token
 
-    def start_generation(self, *start_words):
+    def start_generation(self, *start_words, **kwargs):
         """
         Генерирует предложение.
         :start_words: Попытаться начать предложение с этих слов.
         """
         out_text = ""
         _need_capialize = True
-        for token in self._get_generate_tokens(*start_words):
+        for token in self._get_generate_tokens(*start_words, **kwargs):
             if token in "$^":
                 _need_capialize = True
                 continue
