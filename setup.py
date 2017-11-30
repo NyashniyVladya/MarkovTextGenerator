@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 from MarkovTextGenerator import markov_text_generator
 
-with open("README.md", "r") as readmeFile:
+with open("README.md", "rb") as readmeFile:
     setup(
         name="MarkovTextGenerator",
         version=markov_text_generator.__version__,
@@ -14,5 +14,5 @@ with open("README.md", "r") as readmeFile:
         ],
         keywords="vladya markovgenerator markov_generator markov_chain",
         description="Generator of pseudo-random text, using Markov chains.",
-        long_description=readmeFile.read()
+        long_description=readmeFile.read().decode("utf-8", "ignore")
     )
