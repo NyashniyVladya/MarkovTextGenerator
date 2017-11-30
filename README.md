@@ -1,5 +1,8 @@
 ***MarkovTextGenerator***
 
+[![PyPI](https://pypi.python.org/pypi/MarkovTextGenerator)]
+
+
 **Генератор псевдорандомного текста, посредством цепей Маркова.**
 
 ---
