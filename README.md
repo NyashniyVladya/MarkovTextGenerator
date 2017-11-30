@@ -1,6 +1,6 @@
 ***MarkovTextGenerator***
 
-[![PyPI](https://pypi.python.org/pypi/MarkovTextGenerator)]
+[![PyPI](https://img.shields.io/badge/PyPI--blue.svg)](https://pypi.python.org/pypi/MarkovTextGenerator)
 
 
 **Генератор псевдорандомного текста, посредством цепей Маркова.**
