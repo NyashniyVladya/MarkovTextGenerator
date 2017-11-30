@@ -24,7 +24,7 @@ from random import (
 )
 
 __author__ = "Vladya"
-__version__ = "1.5.7"
+__version__ = "1.5.8"
 
 
 class MarkovTextExcept(Exception):
