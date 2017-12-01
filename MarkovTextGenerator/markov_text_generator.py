@@ -23,9 +23,6 @@ from random import (
     randint
 )
 
-__author__ = "Vladya"
-__version__ = "1.5.9"
-
 
 class MarkovTextExcept(Exception):
     """

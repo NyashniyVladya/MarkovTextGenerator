@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
-from MarkovTextGenerator import markov_text_generator
+import MarkovTextGenerator
 
 setup(
     name="MarkovTextGenerator",
-    version=markov_text_generator.__version__,
-    author=markov_text_generator.__author__,
+    version=MarkovTextGenerator.__version__,
+    author=MarkovTextGenerator.__author__,
     url="https://github.com/NyashniyVladya/MarkovTextGenerator",
     packages=find_packages(),
     python_requires=">=3.6",
