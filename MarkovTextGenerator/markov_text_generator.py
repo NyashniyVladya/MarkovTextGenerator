@@ -38,6 +38,7 @@ class MarkovTextGenerator(object):
 
     WORD_OR_MARKS = re_compile(r"\w+|[\.\!\?…,;:]+")
     ONLY_WORDS = re_compile(r"\w+")
+    ONLY_MARKS = re_compile(r"[\.\!\?…,;:]+")
     END_TOKENS = re_compile(r"[\.\!\?…]+")
 
     def __init__(self, chain_order=2, vk_object=None, *file_paths):
@@ -88,10 +89,11 @@ class MarkovTextGenerator(object):
             if not _variants:
                 break
             next_token = self.get_optimal_variant(variants=_variants, **kwargs)
-            if next_token in "$^":
-                string_counter += 1
-                if string_counter >= _string_len:
-                    break
+            if _string_len > 0:
+                if next_token in "$^":
+                    string_counter += 1
+                    if string_counter >= _string_len:
+                        break
             key_array.append(next_token)
             kwargs["current_string"].append(next_token)
             yield next_token
