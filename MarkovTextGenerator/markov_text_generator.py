@@ -64,6 +64,13 @@ class MarkovTextGenerator(object):
         for _path in frozenset(filter(isfile, map(abspath, file_paths))):
             self.update(_path)
 
+    def get_optimal_variant(self, variants, **kwargs):
+        """
+        Возвращает оптимальный вариант, из выборки.
+        По умолчанию, случайный.
+        """
+        return choice(variants)
+
     def _get_generate_tokens(self, *start_words, **kwargs):
         if not self.base_dict:
             raise MarkovTextExcept("База данных пуста.")
@@ -74,17 +81,19 @@ class MarkovTextGenerator(object):
         _string_len = kwargs.pop("size", None)
         if not isinstance(_string_len, int):
             _string_len = randint(1, 5)
+        kwargs["current_string"] = __text_array
         while True:
             tuple_key = tuple(key_array)
             _variants = self.base_dict.get(tuple_key, None)
             if not _variants:
                 break
-            next_token = choice(_variants)
+            next_token = self.get_optimal_variant(variants=_variants, **kwargs)
             if next_token in "$^":
                 string_counter += 1
                 if string_counter >= _string_len:
                     break
             key_array.append(next_token)
+            kwargs["current_string"].append(next_token)
             yield next_token
 
     def start_generation(self, *start_words, **kwargs):
