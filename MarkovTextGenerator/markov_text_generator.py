@@ -9,7 +9,11 @@
 import json
 from re import compile as re_compile
 from collections import deque
-from os import makedirs
+from shutil import copy2
+from os import (
+    makedirs,
+    remove
+)
 from os.path import (
     abspath,
     isfile,
@@ -199,12 +203,18 @@ class MarkovTextGenerator(object):
         :name: Имя файла, без расширения.
         """
         name = name or "vocabularDump"
+        backup_dump_file = os_join(
+            self.temp_folder,
+            "{0}.backup".format(name)
+        )
         dump_file = os_join(
             self.temp_folder,
             "{0}.json".format(name)
         )
-        with open(dump_file, "w", encoding="utf-8") as js_file:
+        with open(backup_dump_file, "w", encoding="utf-8") as js_file:
             json.dump(self.tokens_array, js_file, ensure_ascii=False)
+        copy2(backup_dump_file, dump_file)
+        remove(backup_dump_file)
 
     def load_dump(self, name=None):
         """

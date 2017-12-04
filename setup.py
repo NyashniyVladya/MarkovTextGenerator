@@ -11,6 +11,9 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3.6"
     ],
+    install_requires=[
+        "shutil"
+    ],
     keywords=(
         "vladya markovgenerator markov_generator markov_chain "
         "MarkovTextGenerator"
