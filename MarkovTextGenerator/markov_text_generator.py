@@ -69,17 +69,40 @@ class MarkovTextGenerator(object):
         for _path in frozenset(filter(isfile, map(abspath, file_paths))):
             self.update(_path)
 
-    def get_optimal_variant(self, variants, **kwargs):
+    def get_optimal_variant(self, variants, start_words, **kwargs):
         """
         Возвращает оптимальный вариант, из выборки.
-        По умолчанию, случайный.
         """
-        return choice(variants)
+
+        if not start_words:
+            return (choice(variants), {})
+
+        _variants = []
+        _weights = []
+        for tok in variants:
+            weight = 0b0
+            for word in start_words:
+                word = word.strip().lower()
+                for token in self.ONLY_WORDS.finditer(word):
+                    token = token.group()
+                    if token == tok:
+                        weight <<= 1
+            if weight:
+                _variants.append(tok)
+                _weights.append(weight)
+
+        if not _variants:
+            return (choice(variants), {})
+
+        return (choices(_variants, weights=_weights, k=1)[0], {})
 
     def _get_generate_tokens(self, *start_words, **kwargs):
         if not self.base_dict:
             raise MarkovTextExcept("База данных пуста.")
-        __text_array = list(self.get_start_array(*start_words))
+        start_data = self.get_start_array(*start_words)
+        if isinstance(start_data[0], tuple):
+            start_data, kwargs["need_rhymes"] = start_data
+        __text_array = list(start_data)
         key_array = deque(__text_array, maxlen=self.chain_order)
         yield from __text_array
         string_counter = 0
@@ -87,12 +110,17 @@ class MarkovTextGenerator(object):
         if not isinstance(_string_len, int):
             _string_len = randint(1, 5)
         kwargs["current_string"] = __text_array
+        kwargs["start_words"] = start_words
         while True:
             tuple_key = tuple(key_array)
             _variants = self.base_dict.get(tuple_key, None)
             if not _variants:
                 break
-            next_token = self.get_optimal_variant(variants=_variants, **kwargs)
+            next_token, kwargs_update = self.get_optimal_variant(
+                variants=_variants,
+                **kwargs
+            )
+            kwargs.update(kwargs_update)
             if _string_len > 0:
                 if next_token in "$^":
                     string_counter += 1
@@ -135,13 +163,13 @@ class MarkovTextGenerator(object):
         _variants = []
         _weights = []
         for tokens in self.start_arrays:
-            weight = 0
+            weight = 0b0
             for word in start_words:
                 word = word.strip().lower()
                 for token in self.ONLY_WORDS.finditer(word):
                     token = token.group()
                     if token in tokens:
-                        weight += 1
+                        weight <<= 1
             if weight:
                 _variants.append(tokens)
                 _weights.append(weight)
