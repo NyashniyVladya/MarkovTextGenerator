@@ -79,19 +79,14 @@ class MarkovTextGenerator(object):
 
         _variants = []
         _weights = []
-        for tok in variants:
-            weight = 0b1
+        for tok in frozenset(variants):
+            weight = variants.count(tok)
             for word in start_words:
-                word = word.strip().lower()
-                for token in self.ONLY_WORDS.finditer(word):
+                for token in self.ONLY_WORDS.finditer(word.strip().lower()):
                     if token.group() == tok:
-                        weight <<= 3
-            if weight > 0b1:
-                _variants.append(tok)
-                _weights.append(weight)
-
-        if not _variants:
-            return (choice(variants), {})
+                        weight <<= 1
+            _variants.append(tok)
+            _weights.append(weight)
 
         return (choices(_variants, weights=_weights, k=1)[0], {})
 
