@@ -93,16 +93,16 @@ class MarkovTextGenerator(object):
     def _get_generate_tokens(self, *start_words, **kwargs):
         if not self.base_dict:
             raise MarkovTextExcept("База данных пуста.")
-        start_data = self.get_start_array(*start_words)
+        _string_len = kwargs.pop("size", None)
+        if not isinstance(_string_len, int):
+            _string_len = randint(1, 5)
+        start_data = self.get_start_array(*start_words, **kwargs)
         if isinstance(start_data[0], tuple):
-            start_data, kwargs["need_rhymes"] = start_data
+            start_data, kwargs["need_rhyme"] = start_data
         __text_array = list(start_data)
         key_array = deque(__text_array, maxlen=self.chain_order)
         yield from __text_array
         string_counter = 0
-        _string_len = kwargs.pop("size", None)
-        if not isinstance(_string_len, int):
-            _string_len = randint(1, 5)
         kwargs["current_string"] = __text_array
         kwargs["start_words"] = start_words
         while True:
@@ -144,7 +144,7 @@ class MarkovTextGenerator(object):
 
         return out_text.strip()
 
-    def get_start_array(self, *start_words):
+    def get_start_array(self, *start_words, **kwargs):
         """
         Генерирует начало предложения.
         :start_words: Попытаться начать предложение с этих слов.
