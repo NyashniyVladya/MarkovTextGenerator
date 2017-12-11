@@ -9,7 +9,8 @@ setup(
     packages=find_packages(),
     python_requires=">=3.6",
     classifiers=[
-        "Programming Language :: Python :: 3.6"
+        "Programming Language :: Python :: 3.6",
+        "License :: GNU GENERAL PUBLIC LICENSE"
     ],
     install_requires=[
         "shutil"
