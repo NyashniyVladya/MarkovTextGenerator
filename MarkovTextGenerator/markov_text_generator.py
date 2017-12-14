@@ -40,6 +40,8 @@ class MarkovTextGenerator(object):
     Базовый класс, для генерации текста.
     """
 
+    RUS = tuple(map(chr, range(1072, 1104))) + ("ё",)
+
     WORD_OR_MARKS = re_compile(r"\w+|[\.\!\?…,;:]+")
     ONLY_WORDS = re_compile(r"\w+")
     ONLY_MARKS = re_compile(r"[\.\!\?…,;:]+")
@@ -69,6 +71,36 @@ class MarkovTextGenerator(object):
         for _path in frozenset(filter(isfile, map(abspath, file_paths))):
             self.update(_path)
 
+
+    @classmethod
+    def is_rus_word(cls, word):
+        if not word:
+            return False
+        return all(map(lambda s: (s.lower() in cls.RUS), word))
+
+
+    def token_is_correct(self, token):
+        """
+        Подходит ли токен, для генерации текста.
+        Допускаются русские слова, знаки препинания и символы начала и конца.
+        """
+        if self.is_rus_word(token):
+            return True
+        elif self.ONLY_MARKS.search(token):
+            return True
+        elif self.END_TOKENS.search(token):
+            return True
+        elif token in "$^":
+            return True
+        return False
+
+    def get_corrected_arrays(self, arr):
+
+        for tokens in arr:
+            if all(map(self.token_is_correct, tokens)):
+                yield tokens
+
+
     def get_optimal_variant(self, variants, start_words, **kwargs):
         """
         Возвращает оптимальный вариант, из выборки.
@@ -80,6 +112,8 @@ class MarkovTextGenerator(object):
         _variants = []
         _weights = []
         for tok in frozenset(variants):
+            if not self.token_is_correct(tok):
+                continue
             weight = variants.count(tok)
             for word in start_words:
                 for token in self.ONLY_WORDS.finditer(word.strip().lower()):
@@ -87,6 +121,9 @@ class MarkovTextGenerator(object):
                         weight <<= 1
             _variants.append(tok)
             _weights.append(weight)
+
+        if not _variants:
+            return (choice(variants), {})
 
         return (choices(_variants, weights=_weights, k=1)[0], {})
 
@@ -162,7 +199,7 @@ class MarkovTextGenerator(object):
                 word = word.strip().lower()
                 for token in self.ONLY_WORDS.finditer(word):
                     if token.group() in tokens:
-                        weight <<= 3
+                        weight <<= 1
             if weight > 0b1:
                 _variants.append(tokens)
                 _weights.append(weight)
@@ -185,7 +222,10 @@ class MarkovTextGenerator(object):
             self.base_dict[tokens].append(word)
             if tokens[0] == "^":  # Первые ключи, для начала генерации.
                 _start_arrays.append(tokens)
-        self.start_arrays = tuple(_start_arrays)
+
+        self.start_arrays = tuple(
+            frozenset(self.get_corrected_arrays(_start_arrays))
+        )
 
     def chain_generator(self):
         """
