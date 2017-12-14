@@ -276,8 +276,11 @@ class MarkovTextGenerator(object):
             raise MarkovTextExcept("Объект бота не задан.")
         if not isinstance(from_dialogue, (int, type(None))):
             raise MarkovTextExcept("Передан неверный тип данных.")
-        user = self.vk_object.check_id(peer_id)
-        user_id = user["id"]
+        if peer_id:
+            user = self.vk_object.check_id(peer_id)
+            user_id = user["id"]
+        else:
+            user_id = None
         if not from_dialogue:
             from_dialogue = user_id
         json_name = "{0}{1}_{2}".format(name_prefix, user_id, from_dialogue)
