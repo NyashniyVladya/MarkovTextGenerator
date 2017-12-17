@@ -64,20 +64,21 @@ class MarkovTextGenerator(object):
         self.start_arrays = ()
         self.vk_object = vk_object
         self.vocabulars = {}
-        self.temp_folder = expanduser("~\\textGeneratorTemp")
+
+        self.temp_folder = abspath(
+            os_join(expanduser("~"), "textGeneratorTemp")
+        )
         if not isdir(self.temp_folder):
             makedirs(self.temp_folder)
 
         for _path in frozenset(filter(isfile, map(abspath, file_paths))):
             self.update(_path)
 
-
     @classmethod
     def is_rus_word(cls, word):
         if not word:
             return False
         return all(map(lambda s: (s.lower() in cls.RUS), word))
-
 
     def token_is_correct(self, token):
         """
@@ -99,7 +100,6 @@ class MarkovTextGenerator(object):
         for tokens in arr:
             if all(map(self.token_is_correct, tokens)):
                 yield tokens
-
 
     def get_optimal_variant(self, variants, start_words, **kwargs):
         """
