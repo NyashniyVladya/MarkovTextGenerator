@@ -217,9 +217,7 @@ class MarkovTextGenerator(object):
         self.base_dict = {}
         _start_arrays = []
         for tokens, word in self.chain_generator():
-            if tokens not in self.base_dict.keys():
-                self.base_dict[tokens] = []
-            self.base_dict[tokens].append(word)
+            self.base_dict.setdefault(tokens, []).append(word)
             if tokens[0] == "^":  # Первые ключи, для начала генерации.
                 _start_arrays.append(tokens)
 
