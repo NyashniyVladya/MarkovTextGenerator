@@ -19,6 +19,7 @@ from os.path import (
     isfile,
     isdir,
     expanduser,
+    splitext,
     join as os_join
 )
 from random import (
@@ -292,54 +293,49 @@ class MarkovTextGenerator(object):
             self.tokens_array = tuple(json.load(js_file))
         self.create_base()
 
-    def get_vocabulary(
-        self,
-        peer_id,
-        from_dialogue=None,
-        update=False,
-        name_prefix=""
-    ):
+    def get_vocabulary(self, target, user=None, update=False):
         """
         Возвращает запас слов, на основе переписок ВК.
         Для имитации речи конкретного человека.
         Работает только с импортом объекта "Владя-бота".
 
-        :peer_id:
-            id, или имя страницы человека, речь которого имитируем.
-        :from_dialogue:
-            Из какого диалога/конфы брать переписку.
-            По умолчанию - переписка текущего профиля с человеком.
+        :target:
+            Объект собседника. Источник переписки.
+        :user:
+            Объект юзера, чью речь имитируем.
+            Если None, то вся переписка.
+        :update:
+            Не использовать бэкап. Обновить форсированно.
         """
         if not self.vk_object:
             raise MarkovTextExcept("Объект бота не задан.")
-        if not isinstance(from_dialogue, (int, type(None))):
-            raise MarkovTextExcept("Передан неверный тип данных.")
-        if peer_id:
-            user = self.vk_object.check_id(peer_id)
-            user_id = user["id"]
-        else:
-            user_id = None
-        if not from_dialogue:
-            from_dialogue = user_id
-        json_name = "{0}{1}_{2}".format(name_prefix, user_id, from_dialogue)
-        json_file = os_join(
-            self.temp_folder,
-            "{0}.json".format(json_name)
-        )
-        if not update:
-            if json_name in self.vocabulars.keys():
-                return self.vocabulars[json_name]
-            if isfile(json_file):
-                with open(json_file, "rb") as js_file:
-                    self.vocabulars[json_name] = tuple(json.load(js_file))
-                return self.vocabulars[json_name]
 
-        all_message_txt = " ".join(
-            self.vk_object.get_all_messages_from_id(from_dialogue, user_id)
+        json_name = "{0}{1}_{2}".format(
+            target.__class__.__name__,
+            target.id,
+            user.id
         )
-        _tokens_array = tuple(self._parse_from_text(all_message_txt))
-        with open(json_file, "w", encoding="utf-8") as js_file:
+        json_file = os_join(self.temp_folder, "{0}.json".format(json_name))
+
+        if not update:
+            result = self.vocabulars.get(json_name, None)
+            if result:
+                return result
+            elif isfile(json_file):
+                with open(json_file, "rb") as js_file:
+                    result = self.vocabulars[json_name] = tuple(
+                        json.load(js_file)
+                    )
+                return result
+
+        _tokens_array = tuple(self.__parse_from_vk_dialogue(target, user))
+
+        backup_file = "{0}.backup".format(splitext(json_file)[0])
+        with open(backup_file, "w", encoding="utf-8") as js_file:
             json.dump(_tokens_array, js_file, ensure_ascii=False)
+
+        copy2(backup_file, json_file)
+        remove(backup_file)
         self.vocabulars[json_name] = _tokens_array
         return _tokens_array
 
@@ -352,6 +348,15 @@ class MarkovTextGenerator(object):
         if new_data:
             self.tokens_array += new_data
             self.create_base()
+
+    def __parse_from_vk_dialogue(self, target, user):
+        for message_dict in target.get_history():
+            current_user = self.vk_object.get_target(message_dict["from_id"])
+            if user and (user is not current_user):
+                continue
+            text = message_dict["body"].strip()
+            if text:
+                yield from self._parse_from_text(text)
 
     def _parse_from_text(self, text):
         """
